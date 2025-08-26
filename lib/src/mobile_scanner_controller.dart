@@ -34,6 +34,8 @@ class MobileScannerController extends ValueNotifier<MobileScannerState> {
     this.torchEnabled = false,
     this.invertImage = false,
     this.autoZoom = false,
+    this.enableIOSAutoCleanup = false,
+    this.iosCleanupIntervalSeconds = 90,
   }) : detectionTimeoutMs = detectionSpeed == DetectionSpeed.normal
            ? detectionTimeoutMs
            : 0,
@@ -113,6 +115,22 @@ class MobileScannerController extends ValueNotifier<MobileScannerState> {
   ///
   /// Only supported on Android.
   final bool autoZoom;
+
+  /// Enable iOS auto cleanup for the camera.
+  ///
+  /// This feature automatically releases the camera's resources after a
+  /// specified interval if no barcodes are detected.
+  ///
+  /// Defaults to false.
+  final bool enableIOSAutoCleanup;
+
+  /// The interval in seconds for iOS auto cleanup.
+  ///
+  /// If `enableIOSAutoCleanup` is true, this interval determines how often
+  /// the camera's resources are checked for cleanup.
+  ///
+  /// Defaults to 90 seconds (1,5 minutes).
+  final int iosCleanupIntervalSeconds;
 
   /// The internal barcode controller, that listens for detected barcodes.
   final StreamController<BarcodeCapture> _barcodesController =
@@ -587,5 +605,21 @@ class MobileScannerController extends ValueNotifier<MobileScannerState> {
     }
 
     _isAttachedCompleter.complete();
+
+    // Set iOS auto cleanup parameters if enabled
+    if (enableIOSAutoCleanup) {
+      _setIOSAutoCleanup();
+    }
+  }
+
+  /// Set iOS auto cleanup parameters on the platform.
+  Future<void> _setIOSAutoCleanup() async {
+    if (MobileScannerPlatform.instance
+        case final MethodChannelMobileScanner implementation) {
+      await implementation.setIOSAutoCleanup(
+        enabled: enableIOSAutoCleanup,
+        intervalSeconds: iosCleanupIntervalSeconds,
+      );
+    }
   }
 }

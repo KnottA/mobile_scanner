@@ -407,18 +407,26 @@ class MethodChannelMobileScanner extends MobileScannerPlatform {
 
   @override
   Future<void> updateScanWindow(Rect? window) async {
-    if (_textureId == null) {
-      return;
-    }
-
-    List<double>? points;
-
-    if (window != null) {
-      points = [window.left, window.top, window.right, window.bottom];
-    }
-
     await methodChannel.invokeMethod<void>('updateScanWindow', {
-      'rect': points,
+      'window': window != null
+          ? <double>[
+              window.left,
+              window.top,
+              window.right,
+              window.bottom,
+            ]
+          : null,
+    });
+  }
+
+  @override
+  Future<void> setIOSAutoCleanup({
+    required bool enabled,
+    required int intervalSeconds,
+  }) async {
+    await methodChannel.invokeMethod<void>('setIOSAutoCleanup', {
+      'enabled': enabled,
+      'intervalSeconds': intervalSeconds,
     });
   }
 

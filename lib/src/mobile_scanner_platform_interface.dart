@@ -123,4 +123,19 @@ abstract class MobileScannerPlatform extends PlatformInterface {
   Future<void> dispose() {
     throw UnimplementedError('dispose() has not been implemented.');
   }
+
+  /// Set iOS auto cleanup parameters.
+  ///
+  /// This method is only supported on iOS.
+  /// When enabled, the scanner will periodically clean up resources
+  /// to prevent memory leaks during extended camera sessions.
+  ///
+  /// The [enabled] parameter controls whether auto cleanup is active.
+  /// The [intervalSeconds] parameter sets the cleanup interval in seconds.
+  Future<void> setIOSAutoCleanup({
+    required bool enabled,
+    required int intervalSeconds,
+  }) {
+    throw UnimplementedError('setIOSAutoCleanup() has not been implemented.');
+  }
 }

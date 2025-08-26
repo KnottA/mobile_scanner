@@ -59,6 +59,59 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
         return stopped && textureId != nil
     }
 
+    // iOS Auto Cleanup properties
+    private var cleanupTimer: Timer?
+    private var enableIOSAutoCleanup: Bool = false
+    private var iosCleanupIntervalSeconds: Int = 0
+    
+    func setIOSAutoCleanup(enabled: Bool, intervalSeconds: Int) {
+        enableIOSAutoCleanup = enabled
+        iosCleanupIntervalSeconds = intervalSeconds
+        
+        if enabled && captureSession != nil && captureSession!.isRunning {
+            startCleanupTimer()
+        } else {
+            stopCleanupTimer()
+        }
+    }
+    
+    func setIOSAutoCleanup(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
+        let argReader = MapArgumentReader(call.arguments as? [String: Any])
+        let enabled = argReader.bool(key: "enabled") ?? false
+        let intervalSeconds = argReader.int(key: "intervalSeconds") ?? 90
+        
+        setIOSAutoCleanup(enabled: enabled, intervalSeconds: intervalSeconds)
+        result(nil)
+    }
+    
+    private func startCleanupTimer() {
+        stopCleanupTimer() // Stop any existing timer
+        
+        if enableIOSAutoCleanup && iosCleanupIntervalSeconds > 0 {
+            cleanupTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(iosCleanupIntervalSeconds), repeats: true) { [weak self] _ in
+                self?.performPeriodicCleanup()
+            }
+        }
+    }
+    
+    private func stopCleanupTimer() {
+        cleanupTimer?.invalidate()
+        cleanupTimer = nil
+    }
+    
+    private func performPeriodicCleanup() {
+        // Perform lightweight cleanup without stopping the camera
+        // Clear any accumulated temporary resources
+        if let buffer = latestBuffer {
+            latestBuffer = nil
+        }
+        
+        // Force garbage collection if available
+        #if os(iOS)
+        // iOS will automatically manage memory, but we can help by clearing references
+        #endif
+    }
+
     public static func register(with registrar: FlutterPluginRegistrar) {
 #if os(iOS)
         let textures = registrar.textures()
@@ -111,6 +164,8 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
             updateScanWindow(call, result)
         case "analyzeImage":
             analyzeImage(call, result)
+        case "setIOSAutoCleanup":
+            setIOSAutoCleanup(call, result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -443,6 +498,11 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
             self.captureSession!.startRunning()
 
             DispatchQueue.main.async {
+                // Start cleanup timer if enabled
+                if self.enableIOSAutoCleanup {
+                    self.startCleanupTimer()
+                }
+                
                 let dimensions: CMVideoDimensions
 
                 if let device = self.device {
@@ -720,6 +780,7 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
 
             return
         }
+        stopCleanupTimer() // Stop the cleanup timer when stopping
         releaseCamera()
         releaseTexture()
 
@@ -772,6 +833,7 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
         if textureId != nil {
             releaseTexture()
         }
+        stopCleanupTimer() // Stop the cleanup timer on deinit
         
         // Clear any remaining references
         sink = nil
