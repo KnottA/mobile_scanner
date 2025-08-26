@@ -308,16 +308,28 @@ class _MobileScannerState extends State<MobileScanner>
       WidgetsBinding.instance.removeObserver(this);
     }
 
+    // Cancel subscription first
     await _subscription?.cancel();
     _subscription = null;
 
+    // Stop the controller if it was auto-started
     if (controller.autoStart) {
-      await controller.stop();
+      try {
+        await controller.stop();
+      } catch (e) {
+        // Ignore errors during disposal
+        debugPrint('Error stopping controller during disposal: $e');
+      }
     }
 
     // Dispose default controller if not provided by user
     if (widget.controller == null) {
-      await controller.dispose();
+      try {
+        await controller.dispose();
+      } catch (e) {
+        // Ignore errors during disposal
+        debugPrint('Error disposing controller: $e');
+      }
     }
   }
 

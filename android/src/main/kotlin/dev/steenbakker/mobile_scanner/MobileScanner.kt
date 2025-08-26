@@ -612,17 +612,23 @@ class MobileScanner(
 
         // Convert YUV_420_888 image to RGB Bitmap
         val bitmap = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
+        var invertedBitmap: Bitmap? = null
+        var imageFormat: YuvToRgbConverter? = null
+        
         try {
-            val imageFormat = YuvToRgbConverter(activity.applicationContext)
+            imageFormat = YuvToRgbConverter(activity.applicationContext)
             imageFormat.yuvToRgb(image, bitmap)
 
             // Create an inverted bitmap
-            val invertedBitmap = invertBitmapColors(bitmap)
+            invertedBitmap = invertBitmapColors(bitmap)
             imageFormat.release()
+            imageFormat = null
 
             return InputImage.fromBitmap(invertedBitmap, imageProxy.imageInfo.rotationDegrees)
         } finally {
-            // Release resources
+            // Release resources in reverse order
+            imageFormat?.release()
+            invertedBitmap?.recycle()
             bitmap.recycle() // Free up bitmap memory
             imageProxy.close() // Close ImageProxy
         }

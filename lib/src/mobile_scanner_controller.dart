@@ -34,8 +34,9 @@ class MobileScannerController extends ValueNotifier<MobileScannerState> {
     this.torchEnabled = false,
     this.invertImage = false,
     this.autoZoom = false,
-  }) : detectionTimeoutMs =
-           detectionSpeed == DetectionSpeed.normal ? detectionTimeoutMs : 0,
+  }) : detectionTimeoutMs = detectionSpeed == DetectionSpeed.normal
+           ? detectionTimeoutMs
+           : 0,
        assert(
          detectionTimeoutMs >= 0,
          'The detection timeout must be greater than or equal to 0.',
@@ -241,10 +242,9 @@ class MobileScannerController extends ValueNotifier<MobileScannerState> {
     // If the device does not have a torch, do not report "off".
     value = value.copyWith(
       isRunning: false,
-      torchState:
-          oldTorchState == TorchState.unavailable
-              ? TorchState.unavailable
-              : TorchState.off,
+      torchState: oldTorchState == TorchState.unavailable
+          ? TorchState.unavailable
+          : TorchState.off,
     );
     return true;
   }
@@ -557,10 +557,22 @@ class MobileScannerController extends ValueNotifier<MobileScannerState> {
     }
 
     _isDisposed = true;
-    unawaited(_barcodesController.close());
-    super.dispose();
 
+    // Stop the scanner first to release platform resources
+    await stop();
+
+    // Dispose all stream subscriptions
+    _disposeListeners();
+
+    // Close the barcode stream controller
+    if (!_barcodesController.isClosed) {
+      await _barcodesController.close();
+    }
+
+    // Dispose platform resources
     await MobileScannerPlatform.instance.dispose();
+
+    super.dispose();
   }
 
   /// Signal to this [MobileScannerController] that it is attached

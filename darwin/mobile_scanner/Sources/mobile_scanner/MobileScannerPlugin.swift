@@ -747,7 +747,9 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
         device.removeObserver(self, forKeyPath: #keyPath(AVCaptureDevice.videoZoomFactor))
 #endif
 
+        // Clear the latest buffer reference - Core Foundation objects are automatically memory managed
         latestBuffer = nil
+        
         self.captureSession = nil
         self.device = nil
     }
@@ -759,6 +761,22 @@ public class MobileScannerPlugin: NSObject, FlutterPlugin, FlutterStreamHandler,
 
         registry.unregisterTexture(textureId)
         textureId = nil
+    }
+    
+    // Add proper deinit to clean up resources
+    deinit {
+        // Ensure camera is stopped and resources are released
+        if captureSession != nil {
+            releaseCamera()
+        }
+        if textureId != nil {
+            releaseTexture()
+        }
+        
+        // Clear any remaining references
+        sink = nil
+        scanWindow = nil
+        symbologies.removeAll()
     }
 
     func analyzeImage(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
